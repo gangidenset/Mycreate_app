@@ -2,8 +2,8 @@ object Form1: TForm1
   Left = 0
   Top = 0
   Caption = 'Form1'
-  ClientHeight = 225
-  ClientWidth = 198
+  ClientHeight = 240
+  ClientWidth = 279
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
   Font.Color = clWindowText
@@ -13,8 +13,8 @@ object Form1: TForm1
   OnClose = FormClose
   TextHeight = 15
   object Label_Time: TLabel
-    Left = 50
-    Top = 24
+    Left = 44
+    Top = 17
     Width = 100
     Height = 54
     Caption = 'Timer'
@@ -24,6 +24,13 @@ object Form1: TForm1
     Font.Name = 'Segoe UI'
     Font.Style = []
     ParentFont = False
+  end
+  object Label_EndTime: TLabel
+    Left = 21
+    Top = 217
+    Width = 78
+    Height = 15
+    Caption = #32066#20102#20104#23450#26178#21051
   end
   object Button_Start: TButton
     Left = 21
@@ -59,7 +66,7 @@ object Form1: TForm1
     Height = 16
     TabOrder = 3
   end
-  object Button1: TButton
+  object Button_SetTime: TButton
     Left = 102
     Top = 168
     Width = 67
@@ -72,7 +79,52 @@ object Form1: TForm1
     Font.Style = []
     ParentFont = False
     TabOrder = 4
-    OnClick = Button1Click
+    OnClick = Button_SetTimeClick
+  end
+  object Button_5min: TButton
+    Left = 196
+    Top = 53
+    Width = 67
+    Height = 40
+    Caption = '5'#20998
+    TabOrder = 5
+    OnClick = Button_5minClick
+  end
+  object Button_10min: TButton
+    Left = 196
+    Top = 99
+    Width = 67
+    Height = 40
+    Caption = '10'#20998
+    TabOrder = 6
+    OnClick = Button_10minClick
+  end
+  object Button_30min: TButton
+    Left = 196
+    Top = 146
+    Width = 67
+    Height = 40
+    Caption = '30'#20998
+    TabOrder = 7
+    OnClick = Button_30minClick
+  end
+  object Button_60min: TButton
+    Left = 196
+    Top = 192
+    Width = 67
+    Height = 40
+    Caption = '60'#20998
+    TabOrder = 8
+    OnClick = Button_60minClick
+  end
+  object Button_3min: TButton
+    Left = 196
+    Top = 7
+    Width = 67
+    Height = 40
+    Caption = '3'#20998
+    TabOrder = 9
+    OnClick = Button_3minClick
   end
   object Timer1: TTimer
     Enabled = False
