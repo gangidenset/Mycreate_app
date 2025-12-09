@@ -1,0 +1,27 @@
+# Delphi 一般
+*.dcu
+*.exe
+*.dll
+*.bpl
+*.dcp
+*.obj
+*.res
+*.~*
+*.json
+
+# IDE 関連
+*.local
+*.identcache
+*.groupproj
+*.~*
+
+# ビルドフォルダ
+/Win32/
+/Win64/
+/Debug/
+/Release/
+
+# TFS / バージョン管理一時ファイル
+*.bak
+*.tmp
+*.log

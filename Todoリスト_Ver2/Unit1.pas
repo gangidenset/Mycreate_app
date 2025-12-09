@@ -65,9 +65,20 @@ implementation
 
 {$R *.dfm}
 
-function GetJsonPath: string;
+const
+  // コンパイル時にプロジェクトルートのパスが入る
+  PROJECT_ROOT = '$(PROJECTDIR)';
+
+function GetProjectRootPath: string;
 begin
-  Result := TPath.Combine(TPath.GetHomePath, 'CheckList.json');
+  // もしEXEと同じフォルダに置きたいなら
+  Result := ExtractFileDir(ParamStr(0));
+end;
+
+
+function GetIniFullPath: string;
+begin
+  Result := TPath.Combine(GetProjectRootPath, 'CheckList.json');
 end;
 
 // Improved PrettyJSON: line-buffer approach + correct escape handling
@@ -195,7 +206,7 @@ begin
     // create both arrays to keep format stable
     J.AddPair('items', TJSONArray.Create);
     J.AddPair('completed', TJSONArray.Create);
-    TFile.WriteAllText(GetJsonPath, PrettyJSON(J.ToString), TEncoding.UTF8);
+    TFile.WriteAllText(GetIniFullPath, PrettyJSON(J.ToString), TEncoding.UTF8);
     ShowMessage('JSON 初期化完了！');
   finally
     J.Free;
@@ -208,7 +219,7 @@ end;
 
 procedure TForm1.Button_pathClick(Sender: TObject);
 begin
-  ShowMessage('保存パス: ' + GetJsonPath);
+  ShowMessage('保存パス: ' + GetIniFullPath);
 end;
 
 procedure TForm1.Button_addClick(Sender: TObject);
@@ -438,7 +449,7 @@ begin
     Obj.AddPair('items', ArrItems);
     Obj.AddPair('completed', ArrCompleted);
 
-    TFile.WriteAllText(GetJsonPath, PrettyJSON(Obj.ToString), TEncoding.UTF8);
+    TFile.WriteAllText(GetIniFullPath, PrettyJSON(Obj.ToString), TEncoding.UTF8);
   finally
     Obj.Free;
   end;
@@ -452,9 +463,9 @@ var
   i, idx: Integer;
   tmpDate: TDateTime;
 begin
-  if not TFile.Exists(GetJsonPath) then Exit;
+  if not TFile.Exists(GetIniFullPath) then Exit;
 
-  Json := TFile.ReadAllText(GetJsonPath, TEncoding.UTF8);
+  Json := TFile.ReadAllText(GetIniFullPath, TEncoding.UTF8);
   Obj := TJSONObject.ParseJSONValue(Json) as TJSONObject;
 
   if Obj = nil then Exit;

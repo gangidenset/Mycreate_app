@@ -63,9 +63,20 @@ implementation
 
 {$R *.dfm}
 
+const
+  // コンパイル時にプロジェクトルートのパスが入る
+  PROJECT_ROOT = '$(PROJECTDIR)';
+
+function GetProjectRootPath: string;
+begin
+  // もしEXEと同じフォルダに置きたいなら
+  Result := ExtractFileDir(ParamStr(0));
+end;
+
+
 function GetIniFullPath: string;
 begin
-  Result := TPath.Combine(GetHomePath, 'ListBox.json');
+  Result := TPath.Combine(GetProjectRootPath, 'ListBox.json');
 end;
 
 function PrettyJSON(const S: string): string;

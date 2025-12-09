@@ -2,7 +2,7 @@ program Project1;
 
 uses
   Vcl.Forms,
-  Unit1 in '..\新しいフォルダー\Unit1.pas' {Form1};
+  Unit1 in '..\Todoリスト_Ver2\Unit1.pas' {Form1};
 
 {$R *.res}
 
