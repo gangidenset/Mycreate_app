@@ -1,0 +1,218 @@
+unit Unit1;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.CheckLst, IniFiles;
+
+type
+  TForm1 = class(TForm)
+    ListBox1: TListBox;
+    Edit1: TEdit;
+    Button_add: TButton;
+    Button_delete: TButton;
+    CheckListBox1: TCheckListBox;
+    procedure Button_addClick(Sender: TObject);
+    procedure ListBox1Click(Sender: TObject);
+    procedure Button_deleteClick(Sender: TObject);
+    procedure CheckListBox1Click(Sender: TObject);
+    procedure CheckListBox1ClickCheck(Sender: TObject);
+    procedure CheckListBox1DrawItem(Control: TWinControl; Index: Integer;
+      Rect: TRect; State: TOwnerDrawState);
+    procedure FormCreate(Sender: TObject);
+    procedure FormClose(Sender: TObject; var Action:TCloseAction);
+  private
+    procedure SaveDate;
+    procedure LoadDate;
+    { Private 宣言 }
+  public
+    { Public 宣言 }
+  end;
+
+var
+  Form1: TForm1;
+
+implementation
+
+{$R *.dfm}
+
+procedure TForm1.Button_addClick(Sender: TObject);
+var
+  oldText, newText: string;
+  idx: Integer;
+begin
+  newText := Trim(Edit1.Text);
+  if newText = '' then Exit;
+
+  // --- 編集モード（リストのどちらかが選択されている） ---
+  if (ListBox1.ItemIndex <> -1) or (CheckListBox1.ItemIndex <> -1) then
+  begin
+    // どちらを編集したか判定
+    if ListBox1.ItemIndex <> -1 then
+    begin
+      oldText := ListBox1.Items[ListBox1.ItemIndex];
+      ListBox1.Items[ListBox1.ItemIndex] := newText;
+    end
+    else
+    begin
+      oldText := CheckListBox1.Items[CheckListBox1.ItemIndex];
+      CheckListBox1.Items[CheckListBox1.ItemIndex] := newText;
+    end;
+
+    // 相手側の同じ文字列も編集
+    idx := CheckListBox1.Items.IndexOf(oldText);
+    if idx <> -1 then
+      CheckListBox1.Items[idx] := newText;
+
+    idx := ListBox1.Items.IndexOf(oldText);
+    if idx <> -1 then
+      ListBox1.Items[idx] := newText;
+  end
+  else
+  begin
+    // --- 新規追加（どちらも選択されていない） ---
+    ListBox1.Items.Add(newText);
+    CheckListBox1.Items.Add(newText);
+  end;
+
+  // 後処理
+  Edit1.Clear;
+  ListBox1.ItemIndex := -1;
+  CheckListBox1.ItemIndex := -1;
+end;
+
+procedure TForm1.Button_deleteClick(Sender: TObject);
+var
+  s: string;
+  idx: integer;
+begin
+  if ListBox1.ItemIndex > -1 then
+    s := ListBox1.Items[ListBox1.ItemIndex]
+  else if checklistbox1.ItemIndex > -1 then
+    s := CheckListBox1.Items[CheckListBox1.ItemIndex]
+  else Exit; //どちらも選ばれていない場合
+
+  idx := ListBox1.Items.IndexOf(s);
+  if idx > -1 then
+    ListBox1.Items.Delete(idx);
+
+  idx := CheckListBox1.Items.IndexOf(s);
+  if idx > -1 then
+    CheckListBox1.Items.Delete(idx);
+end;
+
+procedure TForm1.CheckListBox1Click(Sender: TObject);
+begin
+  if CheckListBox1.ItemIndex > -1 then
+    edit1.Text := CheckListBox1.Items[CheckListBox1.ItemIndex];
+end;
+
+procedure TForm1.CheckListBox1ClickCheck(Sender: TObject);
+var
+  i: Integer;
+begin
+  i := CheckListBox1.ItemIndex;
+  if i < 0 then exit;
+
+  if CheckListBox1.Checked[i] then
+    CheckListBox1.Font.Color := clgraytext
+  else
+    checklistbox1.Font.Color := clwindowtext;
+end;
+
+procedure TForm1.CheckListBox1DrawItem(Control: TWinControl; Index: Integer;
+  Rect: TRect; State: TOwnerDrawState);
+var
+  LB: Tchecklistbox;
+begin
+  LB := Control as Tchecklistbox;
+
+  //背景の描画
+  LB.Canvas.FillRect(rect);
+
+  //完了ならグレーで描画、未完なら黒
+  if LB.Checked[index] then
+    LB.Canvas.Font.Color := clgraytext
+  else
+    LB.Canvas.Font.Color := clwindowtext;
+
+  //テキスト描写
+  LB.Canvas.TextOut(rect.left + 20, rect.Top, LB.Items[index]);
+end;
+
+procedure TForm1.ListBox1Click(Sender: TObject);
+begin
+  if ListBox1.ItemIndex > -1 then
+    Edit1.Text := ListBox1.Items[ListBox1.Itemindex];
+end;
+
+procedure TForm1.SaveDate;
+var
+  ini: TIniFile;
+  i: Integer;
+begin
+  ini := TIniFile.Create('ListBox.ini');
+  try
+    //ListBoxの保存
+    ini.WriteInteger('ListBox', 'Count', ListBox1.Items.Count);
+    for i := 0 to ListBox1.Items.Count - 1 do
+      ini.WriteString('ListBox','Item' + IntToStr(i), ListBox1.Items[i]);
+
+    //CheckListBoxの保存＋チェック状態
+    ini.WriteInteger('CheckListBox', 'Count', CheckListBox1.Items.Count);
+    for i := 0 to CheckListBox1.Items.Count - 1 do
+    begin
+      ini.WriteString('CheckListBox', 'Item' + IntToStr(i), CheckListBox1.Items[i]);
+      ini.WriteInteger('CheckListBox', 'Check' + IntToStr(i),Ord(CheckListBox1.Checked[i]));
+    end;
+  finally
+    ini.Free;
+  end;
+end;
+
+procedure TForm1.LoadDate;
+var
+  ini: TIniFile;
+  i, cnt: Integer;
+  s: string;
+begin
+  ini := TIniFile.Create('ListBox.ini');
+  try
+    //ListBox
+    cnt := ini.ReadInteger('ListBox', 'Count', 0);
+    for i := 0 to cnt - 1 do
+    begin
+      s := ini.ReadString('ListBox','Item' + IntToStr(i), '');
+      if s <> '' then
+        ListBox1.Items.Add(s);
+    end;
+
+
+    //CheckListBox＋チェック復元
+    cnt := ini.ReadInteger('CheckListBox', 'Count', 0);
+    for i := 0 to cnt - 1 do
+    begin
+      s := ini.ReadString('ListBox','Item' + IntToStr(i), '');
+      if s <> '' then
+        CheckListBox1.Items.Add(s);
+
+    if ini.Readinteger('CheckListBox', 'Check' + IntToStr(i), 0) = 1 then
+      CheckListBox1.Checked[i] := True;
+    end;
+  finally
+    ini.Free;
+  end;
+end;
+
+procedure TForm1.FormCreate(Sender: TObject);
+begin
+  LoadDate;
+end;
+
+procedure TForm1.FormClose(Sender: TObject; var Action:TCloseAction);
+begin
+  SaveDate;
+end;
+
+end.

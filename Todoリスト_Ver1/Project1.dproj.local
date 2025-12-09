@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<BorlandProject>
+	<Transactions>
+    <Transaction>2025/12/04 15:07:41.000.279,=C:\work\delphi\Unit1.pas</Transaction>
+    <Transaction>2025/12/04 17:11:08.000.350,C:\work\delphi\初めてのアプリ\Todoリスト\Unit1.dfm=C:\work\delphi\Unit1.dfm</Transaction>
+    <Transaction>2025/12/04 17:11:08.000.350,C:\work\delphi\初めてのアプリ\Todoリスト\Unit1.pas=C:\work\delphi\Unit1.pas</Transaction>
+    <Transaction>2025/12/04 17:11:45.000.087,C:\work\delphi\初めてのアプリ\Todoリスト\Project1.dproj=C:\work\delphi\Project1.dproj</Transaction>
+  </Transactions>
+</BorlandProject>
