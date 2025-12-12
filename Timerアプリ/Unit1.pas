@@ -154,6 +154,7 @@ begin
   RemainingSec := 0;
   ProgressBar1.Position := RemainingSec;
   UpdateTimeLabel;
+  Label_EndTime.Caption := 'I—¹—\’èF'
 end;
 
 procedure TForm1.Button_StartClick(Sender: TObject);

@@ -28,9 +28,9 @@ object Form1: TForm1
   object Label_EndTime: TLabel
     Left = 21
     Top = 217
-    Width = 78
+    Width = 65
     Height = 15
-    Caption = #32066#20102#20104#23450#26178#21051
+    Caption = #32066#20102#20104#23450#65306
   end
   object Button_Start: TButton
     Left = 21
