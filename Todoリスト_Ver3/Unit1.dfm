@@ -117,6 +117,7 @@ object Form1: TForm1
     Font.Height = -12
     Font.Name = 'Segoe UI'
     Font.Style = []
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goFixedRowDefAlign]
     ParentFont = False
     TabOrder = 5
     OnDrawCell = StringGrid1DrawCell
