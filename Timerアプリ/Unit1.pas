@@ -231,6 +231,7 @@ begin
     RemainingSec := 0;
     Timer1.Enabled := False;
     ShowNotification('タイマー完了', '時間になりました！');
+    SetForegroundWindow(Self.Handle);
   end;
   ProgressBar1.Position := RemainingSec;
   UpdateTimeLabel;

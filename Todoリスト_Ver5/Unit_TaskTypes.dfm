@@ -1,8 +1,8 @@
-object Form3: TForm3
+object Form1: TForm1
   Left = 0
   Top = 0
-  Caption = 'Form3'
-  ClientHeight = 426
+  Caption = 'Form1'
+  ClientHeight = 441
   ClientWidth = 624
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -11,11 +11,4 @@ object Form3: TForm3
   Font.Name = 'Segoe UI'
   Font.Style = []
   TextHeight = 15
-  object StringGrid_Completed: TStringGrid
-    Left = 16
-    Top = 37
-    Width = 585
-    Height = 348
-    TabOrder = 0
-  end
 end

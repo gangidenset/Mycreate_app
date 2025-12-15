@@ -6,7 +6,7 @@ uses
   Winapi.Windows, System.SysUtils, System.Classes,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls,
   Vcl.ComCtrls, Vcl.Grids, System.JSON, System.IOUtils, System.IniFiles, System.StrUtils,
-  Vcl.CheckLst, System.Generics.Collections, System.Generics.Defaults, Unit2;
+  Vcl.CheckLst, System.Generics.Collections, System.Generics.Defaults, Unit2, Unit3;
 
 type
   TCheckItem = record
@@ -53,6 +53,7 @@ type
     procedure Button_EditClick(Sender: TObject);
     procedure ComboBox_FilterPriorityChange(Sender: TObject);
     procedure ComboBox_FilterCategoryChange(Sender: TObject);
+    procedure Button_ComplitedClick(Sender: TObject);
   private
     LastSelectedIndex: Integer;
     FItems: TArray<TCheckItem>;
@@ -288,6 +289,23 @@ begin
   end;
 end;
 
+
+procedure TForm1.Button_ComplitedClick(Sender: TObject);
+var
+  dlg: TForm3;
+begin
+  // Unit3のフォームを作成
+  dlg := TForm3.Create(Self);
+  try
+    // 完了タスクフォームを表示
+    dlg.ShowModal;
+  finally
+    dlg.Free;
+  end;
+end;
+
+
+
 procedure TForm1.Button_deleteClick(Sender: TObject);
 var
   i: Integer;
@@ -457,35 +475,13 @@ begin
   RefreshList;
 end;
 
-
-
-
 procedure TForm1.StringGrid1MouseDown(Sender: TObject; Button: TMouseButton;
   Shift: TShiftState; X, Y: Integer);
 var
   ACol, ARow: Integer;
+  dlg: TForm3;
 begin
   StringGrid1.MouseToCell(X, Y, ACol, ARow);
-
-  // ヘッダ行クリック → ソート処理
-  if ARow = 0 then
-  begin
-    case ACol of
-      2: begin
-        FSortAscending := not FSortAscending;
-        SortByPriority;
-      end;
-      3: begin
-        FSortAscending := not FSortAscending;
-        SortByCategory;
-      end;
-      4: begin
-        FSortAscending := not FSortAscending;
-        SortByDeadline;
-      end;
-    end;
-    Exit;
-  end;
 
   // チェック列クリック → 完了処理
   if (ACol = 0) and (ARow > 0) and (ARow < StringGrid1.RowCount) then
@@ -494,18 +490,33 @@ begin
 
     if FItems[ARow - 1].Checked then
     begin
-      Memo_Completed.Lines.Add(
-        Format('%s [優先度:%d, カテゴリ:%s, 期限:%s]',
-          [FItems[ARow - 1].Text,
-           FItems[ARow - 1].Priority,
-           FItems[ARow - 1].Category,
-           DateToStr(FItems[ARow - 1].Deadline)]));
-      Delete(FItems, ARow - 1, 1);
+      // 完了タスクをUnit3のStringGrid_Completedに追加
+      dlg := TForm3.Create(Self);
+      try
+        // Unit3を表示（すでに表示中かもしれませんが、その場合は再表示）
+        dlg.Show;
+
+        // StringGrid_Completedに完了タスクを追加
+        dlg.StringGrid_Completed.RowCount := dlg.StringGrid_Completed.RowCount + 1;
+        dlg.StringGrid_Completed.Cells[0, dlg.StringGrid_Completed.RowCount - 1] := '';  // チェックボックス列（表示しない場合もあります）
+        dlg.StringGrid_Completed.Cells[1, dlg.StringGrid_Completed.RowCount - 1] := FItems[ARow - 1].Text;
+        dlg.StringGrid_Completed.Cells[2, dlg.StringGrid_Completed.RowCount - 1] := IntToStr(FItems[ARow - 1].Priority);
+        dlg.StringGrid_Completed.Cells[3, dlg.StringGrid_Completed.RowCount - 1] := FItems[ARow - 1].Category;
+        dlg.StringGrid_Completed.Cells[4, dlg.StringGrid_Completed.RowCount - 1] := DateToStr(FItems[ARow - 1].Deadline);
+
+        // 完了タスクをFItemsから削除
+        Delete(FItems, ARow - 1, 1);
+      finally
+        dlg.Free;
+      end;
     end;
 
+    // リストを再描画
     RefreshList;
   end;
 end;
+
+
 
 
 procedure TForm1.StringGrid1SelectCell(Sender: TObject; ACol, ARow: Integer;
@@ -558,7 +569,6 @@ begin
 
     if Obj.TryGetValue('completed', ArrCompleted) then
     begin
-      Memo_Completed.Clear;
       for i := 0 to ArrCompleted.Count - 1 do
       begin
         It := ArrCompleted.Items[i] as TJSONObject;
