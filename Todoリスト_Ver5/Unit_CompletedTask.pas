@@ -14,14 +14,19 @@ type
     Button_CompletedReturn: TButton;
     Button_CompletedDelete: TButton;
     procedure FormCreate(Sender: TObject);
-    procedure StringGrid_CompletedTasklistMouseDown(
-      Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+    procedure Button_CompletedReturnClick(Sender: TObject);
+    procedure Button_CompletedDeleteClick(Sender: TObject);
   private
-    FTasks: TArray<TTaskItem>;
     FIndexMap: array of Integer;
+    FSelectedIndex: Integer;
     procedure InitGrid;
+    procedure StringGrid_CompletedTasklistMouseDown(
+      Sender: TObject; Button: TMouseButton;
+      Shift: TShiftState; X, Y: Integer);
   public
-    procedure ShowCompletedTasks(var Tasks: TArray<TTaskItem>);
+    procedure ShowCompletedTasks(const Tasks: TArray<TTaskItem>);
+    property SelectedIndex: Integer read FSelectedIndex;
+
   end;
 
 
@@ -33,27 +38,26 @@ implementation
 {$R *.dfm}
 
 procedure TForm_CompletedTasklist.ShowCompletedTasks(
-  var Tasks: TArray<TTaskItem>);
+  const Tasks: TArray<TTaskItem>);
 var
   i, Row: Integer;
 begin
-  FTasks := Tasks; // 参照共有（TArrayは参照型）
-
   StringGrid_CompletedTasklist.RowCount := 1;
   SetLength(FIndexMap, 0);
+  FSelectedIndex := -1;
   Row := 1;
 
-  for i := 0 to High(FTasks) do
+  for i := 0 to High(Tasks) do
   begin
-    if FTasks[i].Completed then
+    if Tasks[i].Completed then
     begin
       StringGrid_CompletedTasklist.RowCount := Row + 1;
 
-      StringGrid_CompletedTasklist.Cells[0, Row] := '👍';
-      StringGrid_CompletedTasklist.Cells[1, Row] := FTasks[i].Text;
-      StringGrid_CompletedTasklist.Cells[2, Row] := IntToStr(FTasks[i].Priority);
-      StringGrid_CompletedTasklist.Cells[3, Row] := FTasks[i].Category;
-      StringGrid_CompletedTasklist.Cells[4, Row] := DateToStr(FTasks[i].Deadline);
+      StringGrid_CompletedTasklist.Cells[0, Row] := 'check';
+      StringGrid_CompletedTasklist.Cells[1, Row] := Tasks[i].Text;
+      StringGrid_CompletedTasklist.Cells[2, Row] := IntToStr(Tasks[i].Priority);
+      StringGrid_CompletedTasklist.Cells[3, Row] := Tasks[i].Category;
+      StringGrid_CompletedTasklist.Cells[4, Row] := DateToStr(Tasks[i].Deadline);
 
       SetLength(FIndexMap, Length(FIndexMap) + 1);
       FIndexMap[High(FIndexMap)] := i;
@@ -64,21 +68,32 @@ begin
 end;
 
 procedure TForm_CompletedTasklist.StringGrid_CompletedTasklistMouseDown(
-  Sender: TObject; Button: TMouseButton; Shift: TShiftState; X, Y: Integer);
+  Sender: TObject; Button: TMouseButton;
+  Shift: TShiftState; X, Y: Integer);
 var
-  Col, Row, TaskIndex: Integer;
+  Col, Row: Integer;
 begin
   StringGrid_CompletedTasklist.MouseToCell(X, Y, Col, Row);
   if Row <= 0 then Exit;
 
-  if Col = 0 then
-  begin
-    TaskIndex := FIndexMap[Row - 1];
-    FTasks[TaskIndex].Completed := False;
-    //ModalResult := mrOk;
-    //FTasks[TaskIndex].Completed := False;
-    ShowCompletedTasks(FTasks);
-  end;
+  FSelectedIndex := FIndexMap[Row - 1];
+end;
+
+
+procedure TForm_CompletedTasklist.Button_CompletedDeleteClick(Sender: TObject);
+begin
+  if FSelectedIndex < 0 then Exit;
+
+  if MessageDlg('このタスクを削除しますか？',
+    mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    ModalResult := mrYes;
+end;
+
+
+procedure TForm_CompletedTasklist.Button_CompletedReturnClick(Sender: TObject);
+begin
+  if FSelectedIndex < 0 then Exit;
+  ModalResult := mrOk;
 end;
 
 procedure TForm_CompletedTasklist.FormCreate(Sender: TObject);

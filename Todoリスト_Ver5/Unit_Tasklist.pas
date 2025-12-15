@@ -55,7 +55,7 @@ begin
 
   for i := 0 to High(FTasks) do
   begin
-    StringGrid_Tasklist.Cells[0, i+1] := IfThen(FTasks[i].Completed, '👍', '');
+    StringGrid_Tasklist.Cells[0, i+1] := IfThen(FTasks[i].Completed, 'check', '');
     StringGrid_Tasklist.Cells[1, i+1] := FTasks[i].Text;
     StringGrid_Tasklist.Cells[2, i+1] := IntToStr(FTasks[i].Priority);
     StringGrid_Tasklist.Cells[3, i+1] := FTasks[i].Category;
@@ -109,12 +109,27 @@ begin
   Dlg := TForm_CompletedTasklist.Create(Self);
   try
     Dlg.ShowCompletedTasks(FTasks);
-    if Dlg.ShowModal = mrOk then
-      RefreshGrid;
+
+    case Dlg.ShowModal of
+      mrOk:
+        begin
+          // 戻す処理（例：全ての完了タスクを未完了にするなど）
+        end;
+      mrYes:
+        begin
+          // 削除処理（例：全ての完了タスクを削除するなど）
+        end;
+    end;
+
   finally
     Dlg.Free;
   end;
+
+  RefreshGrid;
 end;
+
+
+
 
 procedure TForm_TaskList.Button_EditClick(Sender: TObject);
 var

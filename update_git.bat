@@ -4,7 +4,7 @@ REM Git 一括更新バッチファイル
 REM ===========================
 
 REM 作業ディレクトリに移動（必要に応じて変更）
-cd /d "C:\work\delphi\Mycreate_app"
+cd /d "C:\Users\mymel\OneDrive - Prefectural University of Kumamoto\ドキュメント\delphi\Mycreate_app"
 
 REM 変更をすべて追加
 git add -A

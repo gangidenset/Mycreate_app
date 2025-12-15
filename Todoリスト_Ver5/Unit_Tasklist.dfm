@@ -43,7 +43,7 @@ object Form_TaskList: TForm_TaskList
   object Label_Tasklist: TLabel
     Left = 24
     Top = 105
-    Width = 55
+    Width = 54
     Height = 15
     Caption = 'ToDo'#12522#12473#12488
   end

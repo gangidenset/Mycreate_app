@@ -10,6 +10,7 @@ object Form_CompletedTasklist: TForm_CompletedTasklist
   Font.Height = -12
   Font.Name = 'Segoe UI'
   Font.Style = []
+  OnCreate = FormCreate
   TextHeight = 15
   object Label_Completed: TLabel
     Left = 24
@@ -23,8 +24,8 @@ object Form_CompletedTasklist: TForm_CompletedTasklist
     Top = 37
     Width = 489
     Height = 396
+    Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goFixedRowDefAlign]
     TabOrder = 0
-    OnMouseDown = StringGrid_CompletedTasklistMouseDown
     RowHeights = (
       24
       24
@@ -39,6 +40,7 @@ object Form_CompletedTasklist: TForm_CompletedTasklist
     Height = 25
     Caption = #25147#12427
     TabOrder = 1
+    OnClick = Button_CompletedReturnClick
   end
   object Button_CompletedDelete: TButton
     Left = 533
@@ -47,5 +49,6 @@ object Form_CompletedTasklist: TForm_CompletedTasklist
     Height = 25
     Caption = #21066#38500
     TabOrder = 2
+    OnClick = Button_CompletedDeleteClick
   end
 end
