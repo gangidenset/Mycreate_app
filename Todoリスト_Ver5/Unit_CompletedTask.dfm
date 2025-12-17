@@ -22,7 +22,7 @@ object Form_CompletedTasklist: TForm_CompletedTasklist
   object StringGrid_CompletedTasklist: TStringGrid
     Left = 24
     Top = 37
-    Width = 489
+    Width = 497
     Height = 396
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goFixedRowDefAlign]
     TabOrder = 0

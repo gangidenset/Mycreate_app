@@ -4,24 +4,11 @@ interface
 
 uses
   Winapi.Windows, Winapi.Messages,
-  System.SysUtils,
-  System.Variants,
-  System.Classes,
-  System.StrUtils,
-  System.Generics.Collections,
-  System.Generics.Defaults,
-  System.DateUtils,
-  System.JSON,
-  System.IOUtils,
-  System.IniFiles,
-  Vcl.Graphics,
-  Vcl.Controls,
-  Vcl.Forms,
-  Vcl.Dialogs,
-  Vcl.StdCtrls,
-  Vcl.Grids,
-  Unit_TaskTypes,
-  Unit_CompletedTask;
+  System.SysUtils, System.Variants, System.Classes, System.StrUtils,
+  System.Generics.Collections, System.Generics.Defaults,
+  System.DateUtils, System.JSON, System.IOUtils, System.IniFiles,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Grids,
+  Unit_TaskTypes, Unit_CompletedTask;
 
 type
   TDeadlineLevel = record
@@ -67,11 +54,13 @@ type
     FSortCol: Integer;
     FSortDescending: Boolean;
     FIni: TIniFile;
+    FSaving: Boolean; // 保存中フラグ
     procedure InitGrid;
     procedure SortTasks;
     procedure SaveTasksToFile;
     procedure LoadTasksFromFile;
     procedure LoadSettings(Ini: TIniFile);
+    procedure BackupTasksFile;
   public
     procedure RefreshGrid;
     procedure SetTaskCompleted(Index: Integer; Completed: Boolean);
@@ -80,6 +69,9 @@ type
 var
   Form_TaskList: TForm_TaskList;
   FDeadlineLevels: array[1..3] of TDeadlineLevel;
+
+const
+  MAX_BACKUP_COUNT = 100;
 
 implementation
 
@@ -98,16 +90,26 @@ begin
   S := Ini.ReadString(Section, Ident, '');
   if S <> '' then
   begin
-    // 文字列から整数に変換
     if TryStrToInt(S, V) then
-    begin
-      // Delphi TColor は内部的に BGR 形式なのでそのまま返す
-      Result := V;
-      Exit;
-    end;
+      Exit(V);
   end;
-  // デフォルト値を使う
   Result := Default;
+end;
+
+function GetLatestBackupFile: string;
+var
+  Dir: string;
+  Files: TArray<string>;
+begin
+  Result := '';
+  Dir := TPath.Combine(TPath.GetDocumentsPath, 'TaskBackups');
+  if not TDirectory.Exists(Dir) then Exit;
+
+  Files := TDirectory.GetFiles(Dir, 'tasks_*.json');
+  if Length(Files) = 0 then Exit;
+
+  TArray.Sort<string>(Files);
+  Result := Files[High(Files)];
 end;
 
 { ===================== 初期化 / 終了 ===================== }
@@ -121,7 +123,6 @@ begin
   FSortDescending := False;
 
   IniFileName := TPath.Combine(ExtractFilePath(ParamStr(0)), 'setting.ini');
-
   FIni := TIniFile.Create(IniFileName);
   LoadSettings(FIni);
 
@@ -147,12 +148,11 @@ begin
   StringGrid_Tasklist.Cells[3,0] := 'カテゴリ';
   StringGrid_Tasklist.Cells[4,0] := '期限';
 
-  // 列幅を指定
-  StringGrid_Tasklist.ColWidths[0] := 40;  // 完了チェック用
-  StringGrid_Tasklist.ColWidths[1] := 353; // タスク名
-  StringGrid_Tasklist.ColWidths[2] := 60;  // 優先度
-  StringGrid_Tasklist.ColWidths[3] := 60; // カテゴリ
-  StringGrid_Tasklist.ColWidths[4] := 100; // 期限
+  StringGrid_Tasklist.ColWidths[0] := 40;
+  StringGrid_Tasklist.ColWidths[1] := 353;
+  StringGrid_Tasklist.ColWidths[2] := 60;
+  StringGrid_Tasklist.ColWidths[3] := 60;
+  StringGrid_Tasklist.ColWidths[4] := 100;
 end;
 
 { ===================== ソート ===================== }
@@ -172,8 +172,7 @@ begin
       else
         Result := 0;
       end;
-      if FSortDescending then
-        Result := -Result;
+      if FSortDescending then Result := -Result;
     end
   );
   TArray.Sort<TTaskItem>(FTasks, Comparer);
@@ -187,34 +186,25 @@ var
   ShowTask: Boolean;
 begin
   SortTasks;
-
   Row := 1;
   StringGrid_Tasklist.RowCount := 1;
   SetLength(FRowIndexMap, 0);
 
   for i := 0 to High(FTasks) do
   begin
-    if FTasks[i].Completed then
-      Continue;
+    if FTasks[i].Completed then Continue;
 
     ShowTask := True;
-
-    if (Edit_Search.Text <> '') and
-       (Pos(Edit_Search.Text, FTasks[i].Text) = 0) then
+    if (Edit_Search.Text <> '') and (Pos(Edit_Search.Text, FTasks[i].Text) = 0) then
       ShowTask := False;
-
-    if (ComboBox_Priority.Text <> '') and
-       (IntToStr(FTasks[i].Priority) <> ComboBox_Priority.Text) then
+    if (ComboBox_Priority.Text <> '') and (IntToStr(FTasks[i].Priority) <> ComboBox_Priority.Text) then
       ShowTask := False;
-
-    if (ComboBox_Category.Text <> '') and
-       (FTasks[i].Category <> ComboBox_Category.Text) then
+    if (ComboBox_Category.Text <> '') and (FTasks[i].Category <> ComboBox_Category.Text) then
       ShowTask := False;
 
     if ShowTask then
     begin
       StringGrid_Tasklist.RowCount := Row + 1;
-
       StringGrid_Tasklist.Cells[0, Row] := '';
       StringGrid_Tasklist.Cells[1, Row] := FTasks[i].Text;
       StringGrid_Tasklist.Cells[2, Row] := IntToStr(FTasks[i].Priority);
@@ -240,26 +230,20 @@ var
   Text: string;
 begin
   StringGrid_Tasklist.Canvas.Font.Assign(StringGrid_Tasklist.Font);
-
-  // ヘッダー行は中央揃えで描画
   if ARow = 0 then
   begin
     StringGrid_Tasklist.Canvas.Brush.Color := clBtnFace;
     StringGrid_Tasklist.Canvas.FillRect(Rect);
-
     Text := StringGrid_Tasklist.Cells[ACol, ARow];
     TextRect := Rect;
     DrawText(StringGrid_Tasklist.Canvas.Handle, PChar(Text), Length(Text),
-             TextRect, DT_SINGLELINE or DT_VCENTER or DT_CENTER);
-
+      TextRect, DT_SINGLELINE or DT_VCENTER or DT_CENTER);
     Exit;
   end;
 
-  // デフォルト背景
   BGColor := clWhite;
 
-  // 期限に応じた色付け
-  if ACol <> 0 then
+  if (ARow > 0) and (ARow <= Length(FRowIndexMap)) and (ACol <> 0) then
   begin
     TaskIndex := FRowIndexMap[ARow - 1];
     DaysLeft := DaysBetween(Date, FTasks[TaskIndex].Deadline);
@@ -272,15 +256,12 @@ begin
       BGColor := FDeadlineLevels[3].Color;
   end;
 
-  // 選択行のハイライト優先
   if gdSelected in State then
     BGColor := clHighlight;
 
-  // 背景描画
   StringGrid_Tasklist.Canvas.Brush.Color := BGColor;
   StringGrid_Tasklist.Canvas.FillRect(Rect);
 
-  // 列 0 はチェックボックス
   if ACol = 0 then
   begin
     StringGrid_Tasklist.Canvas.Pen.Color := clBlack;
@@ -293,28 +274,25 @@ begin
     Exit;
   end;
 
-  // 文字色
   if gdSelected in State then
     StringGrid_Tasklist.Canvas.Font.Color := clHighlightText
   else
     StringGrid_Tasklist.Canvas.Font.Color := clBlack;
 
-  // 中央揃えで文字描画（列 2～4）
   if ACol in [2..4] then
   begin
-    Text := StringGrid_Tasklist.Cells[ACol, ARow];
+    if (ARow > 0) and (ARow <= Length(FRowIndexMap)) then
+      Text := StringGrid_Tasklist.Cells[ACol, ARow]
+    else
+      Text := '';
     TextRect := Rect;
     DrawText(StringGrid_Tasklist.Canvas.Handle, PChar(Text), Length(Text),
-             TextRect, DT_SINGLELINE or DT_VCENTER or DT_CENTER);
+      TextRect, DT_SINGLELINE or DT_VCENTER or DT_CENTER);
   end
   else
-    // 左揃え（タスク名など）
-    StringGrid_Tasklist.Canvas.TextRect(Rect,
-      Rect.Left + 4,
-      Rect.Top + 2,
+    StringGrid_Tasklist.Canvas.TextRect(Rect, Rect.Left + 4, Rect.Top + 2,
       StringGrid_Tasklist.Cells[ACol, ARow]);
 
-  // フォーカス枠
   if (gdFocused in State) and (gdSelected in State) then
     StringGrid_Tasklist.Canvas.DrawFocusRect(Rect);
 end;
@@ -330,8 +308,7 @@ begin
 
   if Row = 0 then
   begin
-    if FSortCol = Col then
-      FSortDescending := not FSortDescending
+    if FSortCol = Col then FSortDescending := not FSortDescending
     else
     begin
       FSortCol := Col;
@@ -341,7 +318,7 @@ begin
     Exit;
   end;
 
-  if (Col = 0) and (Row > 0) then
+  if (Col = 0) and (Row > 0) and (Row <= Length(FRowIndexMap)) then
   begin
     TaskIndex := FRowIndexMap[Row - 1];
     FTasks[TaskIndex].Completed := not FTasks[TaskIndex].Completed;
@@ -381,7 +358,7 @@ var
   Dlg: TForm_ToggleTask;
 begin
   Row := StringGrid_Tasklist.Row;
-  if Row <= 0 then Exit;
+  if (Row <= 0) or (Row > Length(FRowIndexMap)) then Exit;
 
   Dlg := TForm_ToggleTask.Create(Self);
   try
@@ -401,16 +378,14 @@ var
   Row, TaskIndex: Integer;
 begin
   Row := StringGrid_Tasklist.Row;
-  if Row <= 0 then Exit;
+  if (Row <= 0) or (Row > Length(FRowIndexMap)) then Exit;
 
   TaskIndex := FRowIndexMap[Row - 1];
 
-  if MessageDlg('削除しますか？', mtConfirmation,
-    [mbYes, mbNo], 0) = mrYes then
+  if MessageDlg('削除しますか？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
   begin
     FTasks := Copy(FTasks, 0, TaskIndex) +
-              Copy(FTasks, TaskIndex + 1,
-              Length(FTasks) - TaskIndex - 1);
+              Copy(FTasks, TaskIndex + 1, Length(FTasks) - TaskIndex - 1);
     RefreshGrid;
   end;
 end;
@@ -419,14 +394,12 @@ procedure TForm_TaskList.Button_ResetClick(Sender: TObject);
 begin
   if Length(FTasks) = 0 then Exit;
 
-  if MessageDlg('すべてのタスクを削除しますか？',
-    mtWarning, [mbYes, mbNo], 0) = mrYes then
-    if MessageDlg('本当によろしいですか？',
-      mtWarning, [mbYes, mbNo], 0) = mrYes then
-    begin
-      FTasks := [];
-      RefreshGrid;
-    end;
+  if (MessageDlg('すべてのタスクを削除しますか？', mtWarning, [mbYes, mbNo], 0) = mrYes) and
+     (MessageDlg('本当によろしいですか？', mtWarning, [mbYes, mbNo], 0) = mrYes) then
+  begin
+    FTasks := [];
+    RefreshGrid;
+  end;
 end;
 
 procedure TForm_TaskList.Button_FilterResetClick(Sender: TObject);
@@ -474,24 +447,30 @@ var
   T: TTaskItem;
   FileName: string;
 begin
-  Arr := TJSONArray.Create;
+  if FSaving then Exit;
+  FSaving := True;
   try
-    for T in FTasks do
-    begin
-      Obj := TJSONObject.Create;
-      Obj.AddPair('text', T.Text);
-      Obj.AddPair('priority', TJSONNumber.Create(T.Priority));
-      Obj.AddPair('category', T.Category);
-      Obj.AddPair('deadline', DateToStr(T.Deadline));
-      Obj.AddPair('completed', TJSONBool.Create(T.Completed));
-      Arr.AddElement(Obj);
+    Arr := TJSONArray.Create;
+    try
+      for T in FTasks do
+      begin
+        Obj := TJSONObject.Create;
+        Obj.AddPair('text', T.Text);
+        Obj.AddPair('priority', TJSONNumber.Create(T.Priority));
+        Obj.AddPair('category', T.Category);
+        Obj.AddPair('deadline', DateToStr(T.Deadline));
+        Obj.AddPair('completed', TJSONBool.Create(T.Completed));
+        Arr.AddElement(Obj);
+      end;
+
+      FileName := TPath.Combine(TPath.GetDocumentsPath, 'tasks.json');
+      TFile.WriteAllText(FileName, Arr.Format);
+      BackupTasksFile;
+    finally
+      Arr.Free;
     end;
-
-    FileName := TPath.Combine(TPath.GetDocumentsPath, 'tasks.json');
-
-    TFile.WriteAllText(FileName, Arr.Format);
   finally
-    Arr.Free;
+    FSaving := False;
   end;
 end;
 
@@ -501,21 +480,29 @@ var
   Obj: TJSONObject;
   V: TJSONValue;
   T: TTaskItem;
-  FileName: string;
+  FileName, BackupFile: string;
 begin
   FileName := TPath.Combine(TPath.GetDocumentsPath, 'tasks.json');
-
   if not TFile.Exists(FileName) then Exit;
 
-  Arr := TJSONObject.ParseJSONValue(
-    TFile.ReadAllText(FileName)
-  ) as TJSONArray;
-
-  if Arr = nil then Exit;
+  Arr := nil;
+  try
+    Arr := TJSONObject.ParseJSONValue(TFile.ReadAllText(FileName)) as TJSONArray;
+    if Arr = nil then raise Exception.Create('JSON parse error');
+  except
+    BackupFile := GetLatestBackupFile;
+    if BackupFile <> '' then
+    begin
+      TFile.Copy(BackupFile, FileName, True);
+      Arr := TJSONObject.ParseJSONValue(TFile.ReadAllText(FileName)) as TJSONArray;
+      if Arr = nil then Exit;
+    end
+    else
+      Exit;
+  end;
 
   try
     SetLength(FTasks, 0);
-
     for V in Arr do
     begin
       Obj := V as TJSONObject;
@@ -535,16 +522,23 @@ procedure TForm_TaskList.LoadSettings(Ini: TIniFile);
 begin
   FDeadlineLevels[1].Days := Ini.ReadInteger('Deadline', 'Level1Days', 1);
   FDeadlineLevels[1].Color := ReadColor(Ini, 'Deadline', 'Level1Color', $00AAAAFF);
-
   FDeadlineLevels[2].Days := Ini.ReadInteger('Deadline', 'Level2Days', 3);
-  FDeadlineLevels[2].Color := ReadColor(Ini, 'Deadline', 'Level2Color', $00DDFFFF);
-
-  FDeadlineLevels[3].Days := Ini.ReadInteger('Deadline', 'Level3Days', 5);
-  FDeadlineLevels[3].Color := ReadColor(Ini, 'Deadline', 'Level3Color', $00AAFFAA);
+  FDeadlineLevels[2].Color := ReadColor(Ini, 'Deadline', 'Level2Color', $00AAFFAA);
+  FDeadlineLevels[3].Days := Ini.ReadInteger('Deadline', 'Level3Days', 7);
+  FDeadlineLevels[3].Color := ReadColor(Ini, 'Deadline', 'Level3Color', $00FFFFAA);
 end;
 
+procedure TForm_TaskList.BackupTasksFile;
+var
+  Dir, FileName: string;
+begin
+  Dir := TPath.Combine(TPath.GetDocumentsPath, 'TaskBackups');
+  if not TDirectory.Exists(Dir) then
+    TDirectory.CreateDirectory(Dir);
 
-
+  FileName := TPath.Combine(Dir, Format('tasks_%s.json', [FormatDateTime('yyyymmdd_HHMMSS', Now)]));
+  TFile.Copy(TPath.Combine(TPath.GetDocumentsPath, 'tasks.json'), FileName);
+end;
 
 end.
 
