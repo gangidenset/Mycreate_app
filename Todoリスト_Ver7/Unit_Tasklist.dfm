@@ -20,12 +20,12 @@ object Form_TaskList: TForm_TaskList
     Height = 15
     Caption = #26908#32034#65306
   end
-  object Label_Filter: TLabel
-    Left = 32
+  object Label_FilterTop: TLabel
+    Left = 14
     Top = 8
-    Width = 47
+    Width = 509
     Height = 15
-    Caption = #12501#12451#12523#12479#12540
+    Caption = '== '#12501#12451#12523#12479#12540' ======================================================='
   end
   object Label_Priority: TLabel
     Left = 27
@@ -43,7 +43,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Label_Tasklist: TLabel
     Left = 24
-    Top = 147
+    Top = 195
     Width = 55
     Height = 15
     Caption = 'ToDo'#12522#12473#12488
@@ -54,6 +54,20 @@ object Form_TaskList: TForm_TaskList
     Width = 65
     Height = 15
     Caption = #36914#34892#29366#27841#65306
+  end
+  object Label_FilterBottom: TLabel
+    Left = 19
+    Top = 174
+    Width = 504
+    Height = 15
+    Caption = '==============================================================='
+  end
+  object Label_Tag: TLabel
+    Left = 47
+    Top = 148
+    Width = 32
+    Height = 15
+    Caption = #12479#12464#65306
   end
   object Edit_Search: TEdit
     Left = 77
@@ -66,7 +80,7 @@ object Form_TaskList: TForm_TaskList
   object ComboBox_Priority: TComboBox
     Left = 77
     Top = 58
-    Width = 348
+    Width = 444
     Height = 23
     TabOrder = 1
     OnChange = ComboBox_PriorityChange
@@ -81,7 +95,7 @@ object Form_TaskList: TForm_TaskList
   object ComboBox_Category: TComboBox
     Left = 77
     Top = 87
-    Width = 348
+    Width = 444
     Height = 23
     TabOrder = 2
     OnChange = ComboBox_CategoryChange
@@ -94,9 +108,9 @@ object Form_TaskList: TForm_TaskList
   end
   object StringGrid_Tasklist: TStringGrid
     Left = 24
-    Top = 168
-    Width = 497
-    Height = 265
+    Top = 216
+    Width = 592
+    Height = 217
     RowCount = 6
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goFixedRowDefAlign]
     TabOrder = 3
@@ -105,7 +119,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Button_Reset: TButton
     Left = 541
-    Top = 408
+    Top = 132
     Width = 75
     Height = 25
     Caption = #21021#26399#21270
@@ -114,7 +128,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Button_Delete: TButton
     Left = 541
-    Top = 377
+    Top = 101
     Width = 75
     Height = 25
     Caption = #21066#38500
@@ -123,7 +137,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Button_Add: TButton
     Left = 541
-    Top = 315
+    Top = 39
     Width = 75
     Height = 25
     Caption = #36861#21152
@@ -132,7 +146,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Button_Completed: TButton
     Left = 541
-    Top = 284
+    Top = 8
     Width = 75
     Height = 25
     Caption = #23436#20102#12479#12473#12463
@@ -141,7 +155,7 @@ object Form_TaskList: TForm_TaskList
   end
   object Button_Edit: TButton
     Left = 541
-    Top = 346
+    Top = 70
     Width = 75
     Height = 25
     Caption = #32232#38598
@@ -149,11 +163,11 @@ object Form_TaskList: TForm_TaskList
     OnClick = Button_EditClick
   end
   object Button_FilterReset: TButton
-    Left = 431
-    Top = 58
-    Width = 90
-    Height = 81
-    Caption = #12522#12475#12483#12488
+    Left = 464
+    Top = 116
+    Width = 57
+    Height = 52
+    Caption = #12501#12451#12523#12479#12540#12522#12475#12483#12488
     TabOrder = 9
     WordWrap = True
     OnClick = Button_FilterResetClick
@@ -161,7 +175,7 @@ object Form_TaskList: TForm_TaskList
   object ComboBox_Status: TComboBox
     Left = 77
     Top = 116
-    Width = 348
+    Width = 381
     Height = 23
     TabOrder = 10
     OnChange = ComboBox_StatusChange
@@ -170,5 +184,17 @@ object Form_TaskList: TForm_TaskList
       #26410#30528#25163
       #36914#34892#20013
       #20445#30041)
+  end
+  object ComboBox_Tag: TComboBox
+    Left = 77
+    Top = 145
+    Width = 381
+    Height = 23
+    TabOrder = 11
+    OnChange = ComboBox_TagChange
+    Items.Strings = (
+      ''
+      #12479#12464#12394#12375
+      #12377#12409#12390#12398#12479#12464)
   end
 end

@@ -20,7 +20,7 @@ type
   TForm_TaskList = class(TForm)
     Label_Search: TLabel;
     Edit_Search: TEdit;
-    Label_Filter: TLabel;
+    Label_FilterTop: TLabel;
     Label_Priority: TLabel;
     Label_Category: TLabel;
     ComboBox_Priority: TComboBox;
@@ -35,6 +35,9 @@ type
     Button_FilterReset: TButton;
     ComboBox_Status: TComboBox;
     Label_Status: TLabel;
+    Label_FilterBottom: TLabel;
+    ComboBox_Tag: TComboBox;
+    Label_Tag: TLabel;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Button_AddClick(Sender: TObject);
@@ -51,13 +54,15 @@ type
     procedure StringGrid_TasklistDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure ComboBox_StatusChange(Sender: TObject);
+    procedure ComboBox_TagChange(Sender: TObject);
   private
     FTasks: TArray<TTaskItem>;
     FRowIndexMap: array of Integer;
     FSortCol: Integer;
     FSortDescending: Boolean;
     FIni: TIniFile;
-    FSaving: Boolean; // 保存中フラグ
+    FSaving: Boolean;
+    SelectedTag: string;
     procedure InitGrid;
     procedure SortTasks;
     procedure SaveTasksToFile;
@@ -115,6 +120,19 @@ begin
   Result := Files[High(Files)];
 end;
 
+function JoinTags(Tags: TArray<string>): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := 0 to High(Tags) do
+  begin
+    if i > 0 then
+      Result := Result + ', ';  // カンマで区切る
+    Result := Result + Tags[i];
+  end;
+end;
+
 { ===================== 初期化 / 終了 ===================== }
 
 procedure TForm_TaskList.FormCreate(Sender: TObject);
@@ -141,7 +159,7 @@ end;
 
 procedure TForm_TaskList.InitGrid;
 begin
-  StringGrid_Tasklist.ColCount := 6;
+  StringGrid_Tasklist.ColCount := 7;
   StringGrid_Tasklist.FixedRows := 1;
   StringGrid_Tasklist.RowCount := 1;
 
@@ -151,6 +169,7 @@ begin
   StringGrid_Tasklist.Cells[3,0] := 'カテゴリ';
   StringGrid_Tasklist.Cells[4,0] := '期限';
   StringGrid_Tasklist.Cells[5,0] := '進行状況';
+  StringGrid_Tasklist.Cells[6,0] := 'タグ';
 
   StringGrid_Tasklist.ColWidths[0] := 40;
   StringGrid_Tasklist.ColWidths[1] := 272;
@@ -158,6 +177,7 @@ begin
   StringGrid_Tasklist.ColWidths[3] := 60;
   StringGrid_Tasklist.ColWidths[4] := 100;
   StringGrid_Tasklist.ColWidths[5] := 80;
+  StringGrid_Tasklist.ColWidths[5] := 100;
 end;
 
 { ===================== ソート ===================== }
@@ -220,10 +240,12 @@ end;
 
 procedure TForm_TaskList.RefreshGrid;
 var
-  i, Row: Integer;
+  i, j, Row: Integer;
   ShowTask: Boolean;
+  TagsText: string;
 begin
-  SortTasks;  // ソートの後に表示する
+  // タスクのソート（必要に応じて）
+  SortTasks;
   Row := 1;
   StringGrid_Tasklist.RowCount := 1;
   SetLength(FRowIndexMap, 0);
@@ -262,6 +284,21 @@ begin
       end;
     end;
 
+    if (ComboBox_Tag.Text <> '') then
+    begin
+      ShowTask := False;  // 初期状態は Falseに設定
+
+      // タスクのタグ配列に ComboBox_Tag.Text が存在するかを確認
+      for j := 0 to High(FTasks[i].Tags) do
+      begin
+        if FTasks[i].Tags[j] = ComboBox_Tag.Text then
+        begin
+          ShowTask := True;  // 一致するタグが見つかった場合、ShowTaskをTrueに設定
+          Break;  // 一致が見つかったらループ終了
+        end;
+      end;
+    end;
+
     // ShowTaskがTrueなら、表示するタスクとしてStringGridに追加
     if ShowTask then
     begin
@@ -277,6 +314,10 @@ begin
         tsInProgress: StringGrid_Tasklist.Cells[5, Row] := '進行中';
         tsOnHold: StringGrid_Tasklist.Cells[5, Row] := '保留';
       end;
+
+      // タグをカンマ区切りで表示
+      TagsText := JoinTags(FTasks[i].Tags);
+      StringGrid_Tasklist.Cells[6, Row] := TagsText;  // タグ列に表示
 
       // FRowIndexMapに対応するタスクのインデックスを保存
       SetLength(FRowIndexMap, Row);
@@ -490,6 +531,12 @@ begin
   RefreshGrid;
 end;
 
+procedure TForm_TaskList.ComboBox_TagChange(Sender: TObject);
+begin
+  SelectedTag := ComboBox_Tag.Text;
+  RefreshGrid;
+end;
+
 procedure TForm_TaskList.ComboBox_CategoryChange(Sender: TObject);
 begin
   RefreshGrid;
@@ -520,6 +567,8 @@ var
   Arr: TJSONArray;
   Obj: TJSONObject;
   T: TTaskItem;
+  TagArr: TJSONArray;
+  Tag: string;
   FileName: string;
 begin
   if FSaving then Exit;
@@ -536,6 +585,13 @@ begin
         Obj.AddPair('deadline', DateToStr(T.Deadline));
         Obj.AddPair('completed', TJSONBool.Create(T.Completed));
         Obj.AddPair('status', TJSONNumber.Create(Integer(T.Status)));
+
+        // タグの保存
+        TagArr := TJSONArray.Create;
+        for Tag in T.Tags do
+          TagArr.Add(Tag);  // 各タグを JSON 配列に追加
+        Obj.AddPair('tags', TagArr);
+
         Arr.AddElement(Obj);
       end;
 
@@ -556,6 +612,8 @@ var
   Obj: TJSONObject;
   V: TJSONValue;
   T: TTaskItem;
+  TagArr: TJSONArray;
+  Tag: string;
   FileName, BackupFile: string;
   Text: string;
 begin
@@ -587,6 +645,13 @@ begin
       T.Deadline := StrToDate(Obj.GetValue<string>('deadline'));
       T.Completed := Obj.GetValue<Boolean>('completed');
       T.Status := TTaskStatus(Obj.GetValue<Integer>('status'));
+
+      // タグの読み込み
+      TagArr := Obj.GetValue<TJSONArray>('tags');
+      SetLength(T.Tags, TagArr.Count);
+      for var i := 0 to TagArr.Count - 1 do
+        T.Tags[i] := TagArr.Items[i].Value;  // JSON配列のタグを読み込み
+
       FTasks := FTasks + [T];
     end;
 
@@ -597,7 +662,6 @@ begin
     end;
   end;
 end;
-
 
 procedure TForm_TaskList.LoadSettings(Ini: TIniFile);
 begin
@@ -619,6 +683,30 @@ begin
 
   FileName := TPath.Combine(Dir, Format('tasks_%s.json', [FormatDateTime('yyyymmdd_HHMMSS', Now)]));
   TFile.Copy(TPath.Combine(TPath.GetDocumentsPath, 'tasks.json'), FileName);
+end;
+
+procedure TForm_TaskList.UpdateTagComboBox;
+var
+  i, j: Integer;
+  TaskTags: TArray<string>;
+begin
+  // ComboBox_Tagのアイテムを一度クリア
+  ComboBox_Tag.Items.Clear;
+
+  // すべてのタスクのタグを調べて、重複しないタグを追加
+  for i := 0 to High(FTasks) do
+  begin
+    TaskTags := FTasks[i].Tags;
+    for j := 0 to High(TaskTags) do
+    begin
+      if ComboBox_Tag.Items.IndexOf(TaskTags[j]) = -1 then
+        ComboBox_Tag.Items.Add(TaskTags[j]);
+    end;
+  end;
+
+  // 必要に応じて、最初のタグをデフォルト選択に設定することもできる
+  if ComboBox_Tag.Items.Count > 0 then
+    ComboBox_Tag.ItemIndex := 0;
 end;
 
 end.

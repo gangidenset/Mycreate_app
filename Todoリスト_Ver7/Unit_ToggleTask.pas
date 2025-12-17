@@ -3,8 +3,9 @@ unit Unit_ToggleTask;
 interface
 
 uses
-  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
-  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ComCtrls, Unit_TaskTypes;
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes,
+  Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.ComCtrls,
+  System.Generics.Collections, Unit_TaskTypes;
 
 type
   TToggleMode = (tmAdd, tmEdit);
@@ -29,6 +30,8 @@ type
     Button_2week: TButton;
     Button_1month: TButton;
     Button_3days: TButton;
+    Edit_ToggleTag: TEdit;
+    Label_ToggleTag: TLabel;
     procedure Button_ToggleOKClick(Sender: TObject);
     procedure Button_ToggleCancelClick(Sender: TObject);
     procedure Button_1weekClick(Sender: TObject);
@@ -62,6 +65,9 @@ begin
 end;
 
 procedure TForm_ToggleTask.SetupForToggle(const Task: TTaskItem);
+var
+  TagStr: string;
+  TagList: TStringList;
 begin
   FMode := tmEdit;
   Label_Toggle.Caption := 'タスク編集';
@@ -71,10 +77,22 @@ begin
   ComboBox_TogglePriority.ItemIndex := Task.Priority;
   ComboBox_ToggleCategory.Text := Task.Category;
   DateTimePicker_ToggleDeadline.Date := Task.Deadline;
+
   case Task.Status of
     tsNotStarted: ComboBox_ToggleStatus.ItemIndex := 0;
     tsInProgress: ComboBox_ToggleStatus.ItemIndex := 1;
     tsOnHold: ComboBox_ToggleStatus.ItemIndex := 2;
+  end;
+
+  // タグをカンマ区切りで表示
+  TagList := TStringList.Create;
+  try
+    // Task.Tags は TArray<string> 型なので、それをカンマ区切りの文字列に変換
+    TagStr := String.Join(',', Task.Tags);  // TArray<string> をカンマ区切りの文字列に変換
+    TagList.CommaText := TagStr;  // CommaText に変換したタグをセット
+    Edit_ToggleTag.Text := TagList.CommaText;
+  finally
+    TagList.Free;
   end;
 end;
 
@@ -103,7 +121,6 @@ begin
   ModalResult := mrCancel;
 end;
 
-
 procedure TForm_ToggleTask.Button_ToggleOKClick(Sender: TObject);
 begin
   if Edit_ToggleTask.Text = '' then
@@ -116,23 +133,36 @@ begin
 end;
 
 function TForm_ToggleTask.GetTask: TTaskItem;
+var
+  TagsList: TStringList;
 begin
   Result.Text := Edit_ToggleTask.Text;
   Result.Priority := ComboBox_TogglePriority.ItemIndex;
   Result.Category := ComboBox_ToggleCategory.Text;
   Result.Deadline := DateTimePicker_ToggleDeadline.Date;
 
+  // ステータスの設定
   case ComboBox_ToggleStatus.ItemIndex of
     0: Result.Status := tsNotStarted;
     1: Result.Status := tsInProgress;
     2: Result.Status := tsOnHold;
   end;
 
+  // タグの取得と設定
+  TagsList := TStringList.Create;
+  try
+    TagsList.CommaText := Edit_ToggleTag.Text;  // カンマ区切りで入力されたタグを処理
+    Result.Tags := TagsList.ToStringArray;  // TTaskItemに設定するために配列に変換
+  finally
+    TagsList.Free;
+  end;
+
+  // 完了ステータスの設定
   if FMode = tmAdd then
     Result.Completed := False
   else
     Result.Completed := FOriginalCompleted;
 end;
 
-
 end.
+

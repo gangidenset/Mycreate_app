@@ -15,6 +15,7 @@ type
     Deadline: TDate;
     Completed: Boolean;
     Status: TTaskStatus;
+    Tags: TArray<string>;
   end;
 
 implementation

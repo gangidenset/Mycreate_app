@@ -2,7 +2,7 @@ object Form_ToggleTask: TForm_ToggleTask
   Left = 0
   Top = 0
   Caption = 'Form_ToggleTask'
-  ClientHeight = 237
+  ClientHeight = 267
   ClientWidth = 624
   Color = clBtnFace
   Font.Charset = DEFAULT_CHARSET
@@ -60,6 +60,13 @@ object Form_ToggleTask: TForm_ToggleTask
     Height = 15
     Caption = #26399#38480#24310#38263#65306
   end
+  object Label_ToggleTag: TLabel
+    Left = 8
+    Top = 206
+    Width = 140
+    Height = 15
+    Caption = #12479#12464'('#12459#12531#12510#21306#20999#12426#12391#20837#21147')'#65306
+  end
   object Edit_ToggleTask: TEdit
     Left = 88
     Top = 45
@@ -104,7 +111,7 @@ object Form_ToggleTask: TForm_ToggleTask
   end
   object Button_ToggleOK: TButton
     Left = 440
-    Top = 204
+    Top = 234
     Width = 75
     Height = 25
     Caption = 'OK'
@@ -113,7 +120,7 @@ object Form_ToggleTask: TForm_ToggleTask
   end
   object Button_ToggleCancel: TButton
     Left = 534
-    Top = 204
+    Top = 234
     Width = 75
     Height = 25
     Caption = #12461#12515#12531#12475#12523
@@ -166,5 +173,12 @@ object Form_ToggleTask: TForm_ToggleTask
     Caption = '3'#26085
     TabOrder = 10
     OnClick = Button_3daysClick
+  end
+  object Edit_ToggleTag: TEdit
+    Left = 154
+    Top = 203
+    Width = 455
+    Height = 23
+    TabOrder = 11
   end
 end
