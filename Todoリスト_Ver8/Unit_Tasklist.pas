@@ -8,7 +8,7 @@ uses
   System.Generics.Collections, System.Generics.Defaults, System.TypInfo,
   System.DateUtils, System.JSON, System.IOUtils, System.IniFiles,
   Vcl.Graphics, Vcl.Controls, Vcl.Forms, Vcl.Dialogs, Vcl.StdCtrls, Vcl.Grids,
-  Unit_TaskTypes, Unit_CompletedTask, Vcl.Menus;
+  Unit_TaskTypes, Unit_CompletedTask, Vcl.Menus, Vcl.ExtCtrls;
 
 type
   TDeadlineLevel = record
@@ -44,6 +44,7 @@ type
     MenuPriority3: TMenuItem;
     MenuPriority4: TMenuItem;
     MenuPriority5: TMenuItem;
+    Timer_Notify: TTimer;
     procedure FormCreate(Sender: TObject);
     procedure FormClose(Sender: TObject; var Action: TCloseAction);
     procedure Button_AddClick(Sender: TObject);
@@ -63,6 +64,7 @@ type
     procedure ComboBox_StatusChange(Sender: TObject);
     procedure ComboBox_TagChange(Sender: TObject);
     procedure FormResize(Sender: TObject);
+    procedure Timer_NotifyTimer(Sender: TObject);
   private
     FTasks: TArray<TTaskItem>;
     FRowIndexMap: array of Integer;
@@ -490,6 +492,41 @@ begin
     PopupMenu_Priority.Popup(Mouse.CursorPos.X, Mouse.CursorPos.Y);
   end;
 end;
+
+procedure TForm_TaskList.Timer_NotifyTimer(Sender: TObject);
+var
+  i: Integer;
+  DaysLeft: Integer;
+  Msg: string;
+begin
+  for i := 0 to High(FTasks) do
+  begin
+    if FTasks[i].Completed then
+      Continue;
+
+    DaysLeft := DaysBetween(FTasks[i].Deadline, Date);
+
+    case DaysLeft of
+      1:  // 期限1日前
+        begin
+          Msg := Format('タスク "%s" は明日が期限です', [FTasks[i].Text]);
+          ShowMessage(Msg);
+        end;
+      0:  // 期限当日
+        begin
+          Msg := Format('タスク "%s" は今日が期限です', [FTasks[i].Text]);
+          ShowMessage(Msg);
+        end;
+    else
+      if DaysLeft < 0 then  // 過ぎたタスク
+      begin
+        Msg := Format('タスク "%s" の期限が過ぎています', [FTasks[i].Text]);
+        ShowMessage(Msg);
+      end;
+    end;
+  end;
+end;
+
 
 procedure TForm_TaskList.SetTaskCompleted(Index: Integer; Completed: Boolean);
 begin

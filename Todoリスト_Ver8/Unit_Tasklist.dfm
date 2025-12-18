@@ -221,4 +221,10 @@ object Form_TaskList: TForm_TaskList
       Caption = #20778#20808#24230#65306#65301
     end
   end
+  object Timer_Notify: TTimer
+    Interval = 1800000
+    OnTimer = Timer_NotifyTimer
+    Left = 536
+    Top = 312
+  end
 end
