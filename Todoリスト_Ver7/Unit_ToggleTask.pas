@@ -113,7 +113,7 @@ end;
 
 procedure TForm_ToggleTask.Button_1monthClick(Sender: TObject);
 begin
-  DateTimePicker_ToggleDeadline.Date := DateTimePicker_ToggleDeadline.Date + 30;
+  DateTimePicker_ToggleDeadline.Date := IncMonth(Date, 1);
 end;
 
 procedure TForm_ToggleTask.Button_ToggleCancelClick(Sender: TObject);

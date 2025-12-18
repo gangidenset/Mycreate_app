@@ -50,11 +50,13 @@ type
     procedure ComboBox_CategoryChange(Sender: TObject);
     procedure Button_FilterResetClick(Sender: TObject);
     procedure Button_DeleteClick(Sender: TObject);
+    procedure DeleteSelectedTasks(Sender: TObject);
     procedure Button_ResetClick(Sender: TObject);
     procedure StringGrid_TasklistDrawCell(Sender: TObject; ACol, ARow: Integer;
       Rect: TRect; State: TGridDrawState);
     procedure ComboBox_StatusChange(Sender: TObject);
     procedure ComboBox_TagChange(Sender: TObject);
+    procedure FormResize(Sender: TObject);
   private
     FTasks: TArray<TTaskItem>;
     FRowIndexMap: array of Integer;
@@ -69,6 +71,7 @@ type
     procedure LoadTasksFromFile;
     procedure LoadSettings(Ini: TIniFile);
     procedure BackupTasksFile;
+    procedure UpdateTagComboBox;
   public
     procedure RefreshGrid;
     procedure SetTaskCompleted(Index: Integer; Completed: Boolean);
@@ -78,8 +81,9 @@ var
   Form_TaskList: TForm_TaskList;
   FDeadlineLevels: array[1..3] of TDeadlineLevel;
 
+//バックアップの個数
 const
-  MAX_BACKUP_COUNT = 100;
+  MAX_BACKUP_COUNT = 10;
 
 implementation
 
@@ -149,6 +153,18 @@ begin
 
   LoadTasksFromFile;
   RefreshGrid;
+  UpdateTagComboBox;
+end;
+
+procedure TForm_TaskList.FormResize(Sender: TObject);
+begin
+  StringGrid_Tasklist.ColWidths[0] := Trunc(StringGrid_Tasklist.Width * 0.10);
+  StringGrid_Tasklist.ColWidths[1] := Trunc(StringGrid_Tasklist.Width * 0.335);
+  StringGrid_Tasklist.ColWidths[2] := Trunc(StringGrid_Tasklist.Width * 0.10);
+  StringGrid_Tasklist.ColWidths[3] := Trunc(StringGrid_Tasklist.Width * 0.10);
+  StringGrid_Tasklist.ColWidths[4] := Trunc(StringGrid_Tasklist.Width * 0.15);
+  StringGrid_Tasklist.ColWidths[5] := Trunc(StringGrid_Tasklist.Width * 0.10);
+  StringGrid_Tasklist.ColWidths[6] := Trunc(StringGrid_Tasklist.Width * 0.10);
 end;
 
 procedure TForm_TaskList.FormClose(Sender: TObject; var Action: TCloseAction);
@@ -159,25 +175,20 @@ end;
 
 procedure TForm_TaskList.InitGrid;
 begin
+  // 列の数や初期設定
   StringGrid_Tasklist.ColCount := 7;
   StringGrid_Tasklist.FixedRows := 1;
   StringGrid_Tasklist.RowCount := 1;
 
-  StringGrid_Tasklist.Cells[0,0] := '完了';
-  StringGrid_Tasklist.Cells[1,0] := 'タスク';
-  StringGrid_Tasklist.Cells[2,0] := '優先度';
-  StringGrid_Tasklist.Cells[3,0] := 'カテゴリ';
-  StringGrid_Tasklist.Cells[4,0] := '期限';
-  StringGrid_Tasklist.Cells[5,0] := '進行状況';
-  StringGrid_Tasklist.Cells[6,0] := 'タグ';
+  // ヘッダー行の設定
+  StringGrid_Tasklist.Cells[0, 0] := '完了';
+  StringGrid_Tasklist.Cells[1, 0] := 'タスク';
+  StringGrid_Tasklist.Cells[2, 0] := '優先度';
+  StringGrid_Tasklist.Cells[3, 0] := 'カテゴリ';
+  StringGrid_Tasklist.Cells[4, 0] := '期限';
+  StringGrid_Tasklist.Cells[5, 0] := '進行状況';
+  StringGrid_Tasklist.Cells[6, 0] := 'タグ';
 
-  StringGrid_Tasklist.ColWidths[0] := 40;
-  StringGrid_Tasklist.ColWidths[1] := 272;
-  StringGrid_Tasklist.ColWidths[2] := 60;
-  StringGrid_Tasklist.ColWidths[3] := 60;
-  StringGrid_Tasklist.ColWidths[4] := 100;
-  StringGrid_Tasklist.ColWidths[5] := 80;
-  StringGrid_Tasklist.ColWidths[5] := 100;
 end;
 
 { ===================== ソート ===================== }
@@ -273,14 +284,12 @@ begin
       ShowTask := False;
 
     // ステータスフィルター
-    if ComboBox_Status.ItemIndex = 0 then
-      ShowTask := ShowTask // ItemIndex = 0の場合はフィルターしない（すべて見せる）
-    else
+    if ComboBox_Status.ItemIndex > 0 then
     begin
       case ComboBox_Status.ItemIndex of
-        1: ShowTask := FTasks[i].Status = tsNotStarted;  // 未開始
-        2: ShowTask := FTasks[i].Status = tsInProgress;  // 進行中
-        3: ShowTask := FTasks[i].Status = tsOnHold;      // 保留
+        1: ShowTask := ShowTask and (FTasks[i].Status = tsNotStarted);  // 未開始
+        2: ShowTask := ShowTask and (FTasks[i].Status = tsInProgress);  // 進行中
+        3: ShowTask := ShowTask and (FTasks[i].Status = tsOnHold);      // 保留
       end;
     end;
 
@@ -338,8 +347,10 @@ var
   BGColor: TColor;
   TextRect: TRect;
   Text: string;
+  TextWidth: Integer;
 begin
   StringGrid_Tasklist.Canvas.Font.Assign(StringGrid_Tasklist.Font);
+
   if ARow = 0 then
   begin
     StringGrid_Tasklist.Canvas.Brush.Color := clBtnFace;
@@ -389,6 +400,30 @@ begin
   else
     StringGrid_Tasklist.Canvas.Font.Color := clBlack;
 
+  if ACol = 1 then // タスク名の列
+  begin
+    Text := StringGrid_Tasklist.Cells[ACol, ARow];
+    TextWidth := StringGrid_Tasklist.Canvas.TextWidth(Text);  // テキストの幅を計算
+
+    // もしテキストの幅が現在の列幅よりも大きければ、列幅を更新
+    if TextWidth > StringGrid_Tasklist.ColWidths[1] then
+    begin
+      StringGrid_Tasklist.ColWidths[1] := TextWidth + 10;  // 余白を加える
+    end;
+  end
+  else if ACol = 6 then // タグの列
+  begin
+    Text := StringGrid_Tasklist.Cells[ACol, ARow];
+    TextWidth := StringGrid_Tasklist.Canvas.TextWidth(Text);  // テキストの幅を計算
+
+    // もしテキストの幅が現在の列幅よりも大きければ、列幅を更新
+    if TextWidth > StringGrid_Tasklist.ColWidths[6] then
+    begin
+      StringGrid_Tasklist.ColWidths[6] := TextWidth + 10;  // 余白を加える
+    end;
+  end;
+
+  // セルの描画（通常通り）
   if ACol in [2..5] then
   begin
     if (ARow > 0) and (ARow <= Length(FRowIndexMap)) then
@@ -456,6 +491,7 @@ begin
       T := Dlg.GetTask;
       FTasks := FTasks + [T];
       RefreshGrid;
+      UpdateTagComboBox;
     end;
   finally
     Dlg.Free;
@@ -477,6 +513,7 @@ begin
     begin
       FTasks[FRowIndexMap[Row - 1]] := Dlg.GetTask;
       RefreshGrid;
+      UpdateTagComboBox;
     end;
   finally
     Dlg.Free;
@@ -485,20 +522,124 @@ end;
 
 procedure TForm_TaskList.Button_DeleteClick(Sender: TObject);
 var
-  Row, TaskIndex: Integer;
+  i, j, TaskIndex, Row: Integer;
+  RowsToDelete: TList<Integer>;
 begin
-  Row := StringGrid_Tasklist.Row;
-  if (Row <= 0) or (Row > Length(FRowIndexMap)) then Exit;
+  // 複数選択された行番号を取得
+  RowsToDelete := TList<Integer>.Create;
 
-  TaskIndex := FRowIndexMap[Row - 1];
+  try
+    // StringGridの選択範囲から削除する行を収集
+    for Row := StringGrid_Tasklist.Selection.Top to StringGrid_Tasklist.Selection.Bottom do
+    begin
+      if (Row > 0) and (Row <= Length(FRowIndexMap)) then
+      begin
+        RowsToDelete.Add(Row - 1); // FRowIndexMapのインデックス（0ベース）
+      end;
+    end;
 
-  if MessageDlg('削除しますか？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
-  begin
-    FTasks := Copy(FTasks, 0, TaskIndex) +
-              Copy(FTasks, TaskIndex + 1, Length(FTasks) - TaskIndex - 1);
-    RefreshGrid;
+    // 選択されていない場合、処理を終了
+    if RowsToDelete.Count = 0 then
+      Exit;
+
+    // 削除確認メッセージ
+    if MessageDlg('選択したタスクを削除しますか？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    begin
+      // 行を削除する処理（後ろから順番に削除していく）
+      RowsToDelete.Sort; // 行番号を昇順にソート（逆順に削除するため）
+
+      for i := RowsToDelete.Count - 1 downto 0 do
+      begin
+        TaskIndex := FRowIndexMap[RowsToDelete[i]]; // 削除するタスクのインデックス
+
+        // FTasksからタスクを削除（インデックスをシフト）
+        for j := TaskIndex to High(FTasks) - 1 do  // 'j'を新たに使用
+        begin
+          FTasks[j] := FTasks[j + 1];  // 一つずつシフト
+        end;
+
+        SetLength(FTasks, Length(FTasks) - 1); // 最後のタスクを削除
+
+        // FRowIndexMapの再構築
+        for j := RowsToDelete[i] to High(FRowIndexMap) - 1 do  // 'j'を新たに使用
+        begin
+          FRowIndexMap[j] := FRowIndexMap[j + 1];
+        end;
+
+        SetLength(FRowIndexMap, Length(FRowIndexMap) - 1); // 最後のインデックスを削除
+      end;
+
+
+      // グリッドを再描画
+      RefreshGrid;
+    end;
+
+  finally
+    RowsToDelete.Free;
   end;
 end;
+
+procedure TForm_TaskList.DeleteSelectedTasks(Sender: TObject);
+var
+  i, TaskIndex, SelectedRow: Integer;
+  RowsToDelete: TList<Integer>;
+begin
+  // 削除する行を格納するリスト
+  RowsToDelete := TList<Integer>.Create;
+
+  try
+    // 複数選択された行を取得
+    for i := StringGrid_Tasklist.Selection.Top to StringGrid_Tasklist.Selection.Bottom do
+    begin
+      if (i > 0) then // 0行目はヘッダーなのでスキップ
+        RowsToDelete.Add(i);
+    end;
+
+    // 行が選択されていない場合、処理を終了
+    if RowsToDelete.Count = 0 then
+      Exit;
+
+    // 削除確認メッセージ
+    if MessageDlg('選択したタスクを削除しますか？', mtConfirmation, [mbYes, mbNo], 0) = mrYes then
+    begin
+      // 削除対象の行を逆順に処理（インデックスのずれを防ぐため）
+      RowsToDelete.Sort; // 昇順にソートして逆順削除
+      for i := RowsToDelete.Count - 1 downto 0 do
+      begin
+        SelectedRow := RowsToDelete[i];
+
+        // タスクインデックスを取得
+        TaskIndex := FRowIndexMap[SelectedRow - 1];
+
+        // FTasksからタスクを削除（インデックスをシフト）
+        for TaskIndex := TaskIndex to High(FTasks) - 1 do
+        begin
+          FTasks[TaskIndex] := FTasks[TaskIndex + 1];  // 一つずつシフト
+        end;
+
+        // FTasks配列の長さを減らす
+        SetLength(FTasks, Length(FTasks) - 1);
+
+        // FRowIndexMapの再構築
+        for TaskIndex := SelectedRow - 1 to High(FRowIndexMap) - 1 do
+        begin
+          FRowIndexMap[TaskIndex] := FRowIndexMap[TaskIndex + 1];
+        end;
+        SetLength(FRowIndexMap, Length(FRowIndexMap) - 1);
+
+        // StringGridから該当行を削除
+        StringGrid_Tasklist.Rows[SelectedRow].Clear;
+      end;
+
+      // タスク削除後にグリッドを更新
+      RefreshGrid;
+    end;
+
+  finally
+    RowsToDelete.Free;
+  end;
+end;
+
 
 procedure TForm_TaskList.Button_ResetClick(Sender: TObject);
 begin
@@ -518,6 +659,7 @@ begin
   ComboBox_Priority.ItemIndex := -1;
   ComboBox_Category.ItemIndex := -1;
   ComboBox_Status.ItemIndex := -1;
+  ComboBox_Tag.ItemIndex := -1;
   RefreshGrid;
 end;
 
@@ -684,7 +826,6 @@ begin
   FileName := TPath.Combine(Dir, Format('tasks_%s.json', [FormatDateTime('yyyymmdd_HHMMSS', Now)]));
   TFile.Copy(TPath.Combine(TPath.GetDocumentsPath, 'tasks.json'), FileName);
 end;
-
 procedure TForm_TaskList.UpdateTagComboBox;
 var
   i, j: Integer;
@@ -693,20 +834,23 @@ begin
   // ComboBox_Tagのアイテムを一度クリア
   ComboBox_Tag.Items.Clear;
 
+  // 「すべて」を最初に追加して、最初に選択できるようにする
+  ComboBox_Tag.Items.Add('');
+
   // すべてのタスクのタグを調べて、重複しないタグを追加
   for i := 0 to High(FTasks) do
   begin
     TaskTags := FTasks[i].Tags;
     for j := 0 to High(TaskTags) do
     begin
+      // すでにタグがComboBoxに存在しない場合のみ追加
       if ComboBox_Tag.Items.IndexOf(TaskTags[j]) = -1 then
         ComboBox_Tag.Items.Add(TaskTags[j]);
     end;
   end;
 
-  // 必要に応じて、最初のタグをデフォルト選択に設定することもできる
-  if ComboBox_Tag.Items.Count > 0 then
-    ComboBox_Tag.ItemIndex := 0;
+  // ComboBoxの最初の状態は「すべて」を選択した状態に
+  ComboBox_Tag.ItemIndex := 0;  // 「すべて」を選択状態に設定
 end;
 
 end.

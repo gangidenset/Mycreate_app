@@ -12,6 +12,10 @@ object Form_TaskList: TForm_TaskList
   Font.Style = []
   OnClose = FormClose
   OnCreate = FormCreate
+  OnResize = FormResize
+  DesignSize = (
+    634
+    441)
   TextHeight = 15
   object Label_Search: TLabel
     Left = 40
@@ -111,6 +115,7 @@ object Form_TaskList: TForm_TaskList
     Top = 216
     Width = 592
     Height = 217
+    Anchors = [akLeft, akTop, akRight, akBottom]
     RowCount = 6
     Options = [goFixedVertLine, goFixedHorzLine, goVertLine, goHorzLine, goRangeSelect, goRowSelect, goFixedRowDefAlign]
     TabOrder = 3
@@ -193,8 +198,6 @@ object Form_TaskList: TForm_TaskList
     TabOrder = 11
     OnChange = ComboBox_TagChange
     Items.Strings = (
-      ''
-      #12479#12464#12394#12375
-      #12377#12409#12390#12398#12479#12464)
+      '')
   end
 end
