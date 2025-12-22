@@ -8,3 +8,5 @@ GitLab Merge Request の練習用。
 
 
 
+Merge Request test.
+
