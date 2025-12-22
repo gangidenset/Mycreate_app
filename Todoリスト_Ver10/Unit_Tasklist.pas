@@ -223,7 +223,6 @@ begin
   IniFileName := TPath.Combine(ExtractFilePath(ParamStr(0)), 'setting.ini');
   FIni := TIniFile.Create(IniFileName);
   LoadSettings(FIni);
-
   LoadTasksFromFile;
   RefreshGrid;
   UpdateTagComboBox;
